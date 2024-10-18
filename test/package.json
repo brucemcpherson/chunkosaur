@@ -1,0 +1,15 @@
+{
+  "name": "testchunkosaur",
+  "version": "1.0.0",
+  "description": "test chunkosaur",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bruce Mcpherson",
+  "license": "ISC",
+  "dependencies": {
+    "got": "^14.4.3",
+    "haversine-distance": "^1.2.3"
+  }
+}
