@@ -1,4 +1,5 @@
 import { Bulker, Chunker } from '../index.mjs';
+//import { Bulker, Chunker } from 'chunkosaur';
 import test from 'ava';
 import delay from 'delay';
 
