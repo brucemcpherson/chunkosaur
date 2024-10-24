@@ -2,9 +2,13 @@
   "name": "testchunkosaur",
   "version": "1.0.0",
   "description": "test chunkosaur",
-  "main": "index.js",
+  "main": "test.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brucemcpherson/chunkosaur.git"
   },
   "author": "Bruce Mcpherson",
   "license": "ISC",

@@ -1,1 +1,5 @@
 **/node_modules
+appsscript.json
+gas/src
+gas/Exports.json
+gas/test.js
