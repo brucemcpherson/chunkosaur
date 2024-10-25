@@ -8,10 +8,10 @@ export class Bulker {
    * @param {function} flusher how to flush
    * @param {number} [threshold=1] number of items in tank at which to initiate a flush
    * @param {function} [errHandler] special function to handle detected (err)=> { ... }
-   * @param {*} [meta=null] any meta data to be passed through to flusher
+   * @param {*} [meta={}] any meta data to be passed through to flusher
    * @return {Bulker}
    */
-  constructor({ flusher, threshold = 1, errHandler, meta = null }) {
+  constructor({ flusher, threshold = 1, errHandler, meta = {} }) {
     this.flusher = flusher;
     this.threshold = threshold;
     this.errHandler =
@@ -88,7 +88,7 @@ export class Bulker {
    */
   async _flusher(values) {
     if (values.length) {
-      return this.flusher({ values, stats: this.stats, meta: this.meta }).then(
+      return this.flusher({ values, stats: this.stats, meta: this.meta, bulker: this }).then(
         (result) => {
           this.stats.flushes++;
           this.stats.items += values.length;

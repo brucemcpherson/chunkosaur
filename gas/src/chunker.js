@@ -774,15 +774,15 @@ var Chunker = /*#__PURE__*/function () {
    * @constructor Chunker
    * @param {function} fetcher how to fetch
    * @param {function} [errHandler] special function to handle detected (err)=> { ... }
-   * @param {*} [meta=null] any meta data to be passed through to fetcher
-   * @return {Bulker}
+   * @param {*} [meta={}] any meta data to be passed through to fetcher
+   * @return {Chunker}
    */
   function Chunker({
     fetcher,
     errHandler = function (err) {
       throw err;
     },
-    meta = null
+    meta = {}
   }) {
     var _this = this;
     var _marked = /*#__PURE__*/regeneratorRuntime.mark(tanker);
@@ -814,10 +814,10 @@ var Chunker = /*#__PURE__*/function () {
       }, null, null, null, Promise);
     };
     /**
-      * this will be called when there's nothing in the input tank
-      * it's a request to get some more somehow
-      * @returns void
-    */
+     * this will be called when there's nothing in the input tank
+     * it's a request to get some more somehow
+     * @returns void
+     */
     var fillTank = function _callee2() {
       var fetched, done, values, _meta;
       return regeneratorRuntime.async(function _callee2$(_context2) {
@@ -829,7 +829,8 @@ var Chunker = /*#__PURE__*/function () {
             _context2.next = 5;
             return regeneratorRuntime.awrap(fetcher({
               stats: _this.stats,
-              meta: _this.meta
+              meta: _this.meta,
+              chunker: _this
             }));
           case 5:
             fetched = _context2.sent;

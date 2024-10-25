@@ -7,15 +7,15 @@ export class Chunker {
    * @constructor Chunker
    * @param {function} fetcher how to fetch
    * @param {function} [errHandler] special function to handle detected (err)=> { ... }
-   * @param {*} [meta=null] any meta data to be passed through to fetcher
-   * @return {Bulker}
+   * @param {*} [meta={}] any meta data to be passed through to fetcher
+   * @return {Chunker}
    */
   constructor({
     fetcher,
     errHandler = (err) => {
       throw err;
     },
-    meta = null,
+    meta = {},
   }) {
     this.fetcher = fetcher;
     this.tank = [];
@@ -47,7 +47,7 @@ export class Chunker {
       let fetched = null;
       try {
         // fetched must return done: false + values or done:true
-        fetched = await fetcher({ stats: this.stats, meta: this.meta });
+        fetched = await fetcher({ stats: this.stats, meta: this.meta, chunker: this });
         let done = !fetched || fetched.done;
         const values = !done && fetched.values;
         const meta = !done && fetched.meta;
