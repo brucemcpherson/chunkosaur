@@ -6,7 +6,7 @@ The chunker yields each item one by one, and output values can be passed to the 
 
 The handling of the batching of output (bulker) and debatching of input (chunker) is handled automatically. The chunker and bulker can be used independenly or together, and scenarios with multiple chunkers or bulkers are also supported.
 
-## install
+## install (Node)
 
 ```
 npm i chunkosaur
@@ -17,6 +17,9 @@ npm i chunkosaur
 ```
 import {Bulker, Chunker} from 'chunkosaur'
 ```
+## apps script install
+There is a published Apps Script library 'bmChunkosaur' you can use. 
+[See this article for details](https://ramblings.mcpher.com/paging-large-data-sets-and-how-to-make-apps-script-understand-generators/)
 
 ## usage
 
@@ -306,5 +309,7 @@ const flusher = async ({ values }) => {
 if you are running the tests, install ava for test https://github.com/avajs/ava
 
 ## Article
+ 
+[For mode details see this article](https://ramblings.mcpher.com/paging-large-data-sets-and-how-to-make-apps-script-understand-generators/)
 
-for details see https://ramblings.mcpher.com/paging-large-data-sets-and-how-to-make-apps-script-understand-generators/. Also includes information on the Google Apps Script version of this if that's your thing.
+Also includes information on the Google Apps Script version of this if that's your thing.
