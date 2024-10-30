@@ -7,6 +7,25 @@ import delay from 'delay';
 const fix = Array.from({ length: 71 }, (_, i) => i);
 
 
+test('fetcher returns undefined things and detects eof', async (t) => {
+
+  // user provided fetcher - simulate an api call
+  const fetcher = async () => {
+    const values = undefined
+    return {
+      values,
+      done: !values || !values.length,
+    };
+  };
+
+  const chunker = new Chunker({ fetcher });
+
+  for await (const value of chunker.iterator) {
+    
+  }
+  t.is (chunker.eof, true)
+
+});
 
 test('every item gets bulked using stats', async (t) => {
   const chunkSize = 1 + Math.round(Math.random() * fix.length);
@@ -79,5 +98,5 @@ test('test meta and maxitems', async (t) => {
   t.is(stats.pushes, stats.items);
   t.deepEqual(outItems, smallFix);
   t.is(outItems.length, maxItems)
-  console.log(stats)
+
 });

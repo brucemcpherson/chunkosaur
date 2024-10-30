@@ -48,7 +48,7 @@ export class Chunker {
       try {
         // fetched must return done: false + values or done:true
         fetched = await fetcher({ stats: this.stats, meta: this.meta, chunker: this });
-        let done = !fetched || fetched.done;
+        let done = !fetched || fetched.done || typeof fetched.values === typeof undefined;
         const values = !done && fetched.values;
         const meta = !done && fetched.meta;
 
