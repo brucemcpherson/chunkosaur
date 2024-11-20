@@ -313,3 +313,7 @@ if you are running the tests, install ava for test https://github.com/avajs/ava
 [For mode details see this article](https://ramblings.mcpher.com/paging-large-data-sets-and-how-to-make-apps-script-understand-generators/)
 
 Also includes information on the Google Apps Script version of this if that's your thing.
+
+## Example usage
+
+I use a number of both chunkers and bulker in [Gupper - Manage Gemini uploads, schemas and prompts](https://github.com/brucemcpherson/gupper), which is a node cli for working with Gemini files and models. Head over there if you want to see some real life usage of these chunkosaur modules.
