@@ -19,12 +19,13 @@ export class Chunker {
     },
     meta = {},
   }) {
-    this.treatNoResultsAsDone = treatNoResultsAsDone
-    this.fetcher = fetcher;
-    this.tank = [];
-    this.meta = meta;
-    this.errHandler = errHandler;
-    this.stats = {
+    const self = this
+    self.treatNoResultsAsDone = treatNoResultsAsDone
+    self.fetcher = fetcher;
+    self.tank = [];
+    self.meta = meta;
+    self.errHandler = errHandler;
+    self.stats = {
       fetches: 0,
       items: 0,
       startedAt: 0,
@@ -32,12 +33,28 @@ export class Chunker {
       finishedAt: 0,
       elapsed: 0,
     };
+    self.exhausted = new Promise (resolve=> {
+      self.resolveExhausted = resolve
+    })
+    self.yields = 0
 
-    this.eof = false;
+    const gracefulExit = (error = null) => {
+      self.resolveExhausted({
+        error,
+        yields: self.yields
+      })
+      self.eof = true
+      if (error) {
+        return self.errHandler(error);
+      }
+      return self
+    }
+
+    self.eof = false;
 
     // add a chunk to the input tank
     const appendToTank = async (chunk) => {
-      Array.prototype.push.apply(this.tank, chunk);
+      Array.prototype.push.apply(self.tank, chunk);
     };
     /**
      * this will be called when there's nothing in the input tank
@@ -45,72 +62,83 @@ export class Chunker {
      * @returns void
      */
     const fillTank = async () => {
-      if (!this.stats.startedAt) this.stats.startedAt = new Date().getTime();
+      if (!self.stats.startedAt) self.stats.startedAt = new Date().getTime();
 
-      let fetched = null;
       try {
         // fetched must return done: false + values or done:true
-        fetched = await fetcher({ stats: this.stats, meta: this.meta, chunker: this });
+        const fetched = await fetcher({ stats: self.stats, meta: self.meta, chunker: self });
         let done = !fetched || fetched.done || typeof fetched.values === typeof undefined;
-        done = done || (this.treatNoResultsAsDone && Array.isArray(fetched) && !fetched.length)
+        done = done || (self.treatNoResultsAsDone && Array.isArray(fetched) && !fetched.length)
+
         // final fetched should return meta , or meta with null to retain existing meta
-        const { values, meta } = fetched;
+        // regenerator fails with this syntax
+        //const { values, meta } = fetched;
+
+        const values = fetched.values
+        const meta = fetched.meta
+
 
         if (!done && !Array.isArray(values)) {
-          return this.errHandler(
+          return gracefulExit(
             new Error(`expected result of type array - got ${typeof values}`),
           );
         }
         if (done && Array.isArray(values) && values.length) {
-          return this.errHandler(
+          return gracefulExit(
             new Error(`received done signal along with ${values.length} fetched values - only signal done when there are no more values to fetch`),
           );
         }
 
         // updated meta for next time
-        this.meta = meta || this.meta;
+        self.meta = meta || self.meta;
         if (done) return done
 
         // if we received no values and got here, then it means we're not done, just that page didnt have any qualifying data
         // so go again
-        this.stats.fetches++;
+        self.stats.fetches++;
         if (!values.length) return await fillTank()
 
         // force no more fetching
-        this.stats.items += values.length;
+        self.stats.items += values.length;
   
         appendToTank(values);
 
         return done;
       } catch (err) {
-        return this.errHandler(err);
+        return gracefulExit(err);
       }
     };
-    const self = this;
+    
     const tank = self.tank;
 
     // this is the generator
     async function* tanker() {
       // iterate through every item either in the tank
       // or fill it up if there's more
+      let eof = null
       do {
         if (!tank.length) {
-          self.eof = await fillTank();
-          if (self.eof) {
+          eof = await fillTank();
+          if (eof) {
             const finishedAt = new Date().getTime();
             self.stats.finishedAt = finishedAt;
             self.stats.elapsed = finishedAt - self.stats.startedAt;
           }
         }
-        if (!self.eof) {
+        if (!eof) {
           const value = tank.splice(0, 1)[0];
+          self.yields++
           yield value;
         }
-      } while (!self.eof);
+      } while (!eof);
+      
+      // now resolve as it's all over
+      return gracefulExit()
+
     }
 
-    // expose as iterator
-    this.iterator = tanker();
+    // expose as 
+    self.iterator = tanker();
   }
 
   async done() {

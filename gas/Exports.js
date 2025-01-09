@@ -30,6 +30,7 @@ var Exports = {
         if (
           typeof prop !== 'symbol' &&
           prop !== 'inspect' &&
+          prop !== '__GS_INTERNAL_isProxy' &&
           !Reflect.has(target, prop)
         )
           throw `guard detected attempt to get non-existent property ${prop}`;

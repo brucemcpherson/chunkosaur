@@ -773,25 +773,28 @@ var Chunker = /*#__PURE__*/function () {
   /**
    * @constructor Chunker
    * @param {function} fetcher how to fetch
+   * @param {boolean} [treatNoResultsAsDone=false] if the fetcher returns an array with zero length, treat as done, otherwise refetch
    * @param {function} [errHandler] special function to handle detected (err)=> { ... }
    * @param {*} [meta={}] any meta data to be passed through to fetcher
    * @return {Chunker}
    */
   function Chunker({
     fetcher,
+    treatNoResultsAsDone = false,
     errHandler = function (err) {
       throw err;
     },
     meta = {}
   }) {
-    var _this = this;
     var _marked = /*#__PURE__*/regeneratorRuntime.mark(tanker);
     _classCallCheck(this, Chunker);
-    this.fetcher = fetcher;
-    this.tank = [];
-    this.meta = meta;
-    this.errHandler = errHandler;
-    this.stats = {
+    var self = this;
+    self.treatNoResultsAsDone = treatNoResultsAsDone;
+    self.fetcher = fetcher;
+    self.tank = [];
+    self.meta = meta;
+    self.errHandler = errHandler;
+    self.stats = {
       fetches: 0,
       items: 0,
       startedAt: 0,
@@ -799,14 +802,29 @@ var Chunker = /*#__PURE__*/function () {
       finishedAt: 0,
       elapsed: 0
     };
-    this.eof = false;
+    self.exhausted = new Promise(function (resolve) {
+      self.resolveExhausted = resolve;
+    });
+    self.yields = 0;
+    var gracefulExit = function (error = null) {
+      self.resolveExhausted({
+        error,
+        yields: self.yields
+      });
+      self.eof = true;
+      if (error) {
+        return self.errHandler(error);
+      }
+      return self;
+    };
+    self.eof = false;
 
     // add a chunk to the input tank
     var appendToTank = function _callee(chunk) {
       return regeneratorRuntime.async(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
-            Array.prototype.push.apply(_this.tank, chunk);
+            Array.prototype.push.apply(self.tank, chunk);
           case 1:
           case "end":
             return _context.stop();
@@ -823,90 +841,120 @@ var Chunker = /*#__PURE__*/function () {
       return regeneratorRuntime.async(function _callee2$(_context2) {
         while (1) switch (_context2.prev = _context2.next) {
           case 0:
-            if (!_this.stats.startedAt) _this.stats.startedAt = new Date().getTime();
-            fetched = null;
-            _context2.prev = 2;
-            _context2.next = 5;
+            if (!self.stats.startedAt) self.stats.startedAt = new Date().getTime();
+            _context2.prev = 1;
+            _context2.next = 4;
             return regeneratorRuntime.awrap(fetcher({
-              stats: _this.stats,
-              meta: _this.meta,
-              chunker: _this
+              stats: self.stats,
+              meta: self.meta,
+              chunker: self
             }));
-          case 5:
+          case 4:
             fetched = _context2.sent;
-            done = !fetched || fetched.done;
-            values = !done && fetched.values;
-            _meta = !done && fetched.meta;
+            done = !fetched || fetched.done || typeof fetched.values === typeof undefined;
+            done = done || self.treatNoResultsAsDone && Array.isArray(fetched) && !fetched.length;
+
+            // final fetched should return meta , or meta with null to retain existing meta
+            // regenerator fails with this syntax
+            //const { values, meta } = fetched;
+            values = fetched.values;
+            _meta = fetched.meta;
             if (!(!done && !Array.isArray(values))) {
               _context2.next = 11;
               break;
             }
-            return _context2.abrupt("return", _this.errHandler(new Error(`expected result of type array - got ${typeof values}`)));
+            return _context2.abrupt("return", gracefulExit(new Error(`expected result of type array - got ${typeof values}`)));
           case 11:
+            if (!(done && Array.isArray(values) && values.length)) {
+              _context2.next = 13;
+              break;
+            }
+            return _context2.abrupt("return", gracefulExit(new Error(`received done signal along with ${values.length} fetched values - only signal done when there are no more values to fetch`)));
+          case 13:
             // updated meta for next time
-            _this.meta = _meta || _this.meta;
-
-            // force no more fetching
+            self.meta = _meta || self.meta;
             if (!done) {
-              _this.stats.items += values.length;
-              _this.stats.fetches++;
-              appendToTank(values);
+              _context2.next = 16;
+              break;
             }
             return _context2.abrupt("return", done);
           case 16:
-            _context2.prev = 16;
-            _context2.t0 = _context2["catch"](2);
-            return _context2.abrupt("return", _this.errHandler(_context2.t0));
-          case 19:
+            // if we received no values and got here, then it means we're not done, just that page didnt have any qualifying data
+            // so go again
+            self.stats.fetches++;
+            if (values.length) {
+              _context2.next = 21;
+              break;
+            }
+            _context2.next = 20;
+            return regeneratorRuntime.awrap(fillTank());
+          case 20:
+            return _context2.abrupt("return", _context2.sent);
+          case 21:
+            // force no more fetching
+            self.stats.items += values.length;
+            appendToTank(values);
+            return _context2.abrupt("return", done);
+          case 26:
+            _context2.prev = 26;
+            _context2.t0 = _context2["catch"](1);
+            return _context2.abrupt("return", gracefulExit(_context2.t0));
+          case 29:
           case "end":
             return _context2.stop();
         }
-      }, null, null, [[2, 16]], Promise);
+      }, null, null, [[1, 26]], Promise);
     };
-    var self = this;
     var tank = self.tank;
 
     // this is the generator
     function tanker() {
-      var finishedAt, value;
+      var eof, finishedAt, value;
       return regeneratorRuntime.async(function tanker$(_context3) {
         while (1) switch (_context3.prev = _context3.next) {
           case 0:
+            // iterate through every item either in the tank
+            // or fill it up if there's more
+            eof = null;
+          case 1:
             if (tank.length) {
-              _context3.next = 5;
+              _context3.next = 6;
               break;
             }
-            _context3.next = 3;
+            _context3.next = 4;
             return regeneratorRuntime.awrap(fillTank());
-          case 3:
-            self.eof = _context3.sent;
-            if (self.eof) {
+          case 4:
+            eof = _context3.sent;
+            if (eof) {
               finishedAt = new Date().getTime();
               self.stats.finishedAt = finishedAt;
               self.stats.elapsed = finishedAt - self.stats.startedAt;
             }
-          case 5:
-            if (self.eof) {
-              _context3.next = 9;
+          case 6:
+            if (eof) {
+              _context3.next = 11;
               break;
             }
             value = tank.splice(0, 1)[0];
-            _context3.next = 9;
+            self.yields++;
+            _context3.next = 11;
             return value;
-          case 9:
-            if (!self.eof) {
-              _context3.next = 0;
+          case 11:
+            if (!eof) {
+              _context3.next = 1;
               break;
             }
-          case 10:
+          case 12:
+            return _context3.abrupt("return", gracefulExit());
+          case 13:
           case "end":
             return _context3.stop();
         }
       }, _marked, null, null, Promise);
     }
 
-    // expose as iterator
-    this.iterator = tanker();
+    // expose as 
+    self.iterator = tanker();
   }
   return _createClass(Chunker, [{
     key: "done",

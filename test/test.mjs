@@ -145,5 +145,8 @@ test('test maxitems', async (t) => {
   t.is(stats.pushes, stats.items);
   t.deepEqual(outItems, smallFix);
   t.is(outItems.length, maxItems)
+  const exited = await chunker.exhausted
+  t.is (exited.error, null)
+  t.is (exited.yields, maxItems)
 
 });
